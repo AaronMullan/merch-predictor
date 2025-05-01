@@ -6,104 +6,22 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-
-type MerchandiseItem = {
-  name: string;
-  price: number;
-};
-
-type SalesData = {
-  [key: string]: number;
-};
-
-type City = {
-  name: string;
-  date: string;
-  capacity: number;
-  sales: SalesData;
-};
-
-const merchandise: MerchandiseItem[] = [
-  { name: 'Green T-shirt Small', price: 25 },
-  { name: 'Green T-shirt Large', price: 25 },
-  { name: 'Black T-shirt Small', price: 25 },
-  { name: 'Black T-shirt Large', price: 25 },
-  { name: 'Tour Poster', price: 15 },
-  { name: 'CD', price: 10 },
-  { name: 'Vinyl', price: 30 },
-];
-
-const cities: City[] = [
-  {
-    name: 'New York',
-    date: '2024-04-29',
-    capacity: 20000,
-    sales: {
-      'Green T-shirt Small': 45,
-      'Green T-shirt Large': 38,
-      'Black T-shirt Small': 52,
-      'Black T-shirt Large': 47,
-      'Tour Poster': 120,
-      CD: 85,
-      Vinyl: 65,
-    },
-  },
-  {
-    name: 'Los Angeles',
-    date: '2025-04-30',
-    capacity: 18000,
-    sales: {
-      'Green T-shirt Small': 38,
-      'Green T-shirt Large': 42,
-      'Black T-shirt Small': 45,
-      'Black T-shirt Large': 40,
-      'Tour Poster': 95,
-      CD: 70,
-      Vinyl: 55,
-    },
-  },
-  {
-    name: 'Chicago',
-    date: '2025-05-01',
-    capacity: 15000,
-    sales: {
-      'Green T-shirt Small': 32,
-      'Green T-shirt Large': 35,
-      'Black T-shirt Small': 38,
-      'Black T-shirt Large': 33,
-      'Tour Poster': 85,
-      CD: 60,
-      Vinyl: 45,
-    },
-  },
-  {
-    name: 'Houston',
-    date: '2025-05-02',
-    capacity: 12000,
-    sales: {
-      'Green T-shirt Small': 28,
-      'Green T-shirt Large': 30,
-      'Black T-shirt Small': 35,
-      'Black T-shirt Large': 32,
-      'Tour Poster': 75,
-      CD: 55,
-      Vinyl: 40,
-    },
-  },
-];
+import { merchandise, cities, City } from './data';
 
 // Calculate average sales per capacity for each item
 const calculateAverageSalesPerCapacity = (cities: City[]) => {
   const totals: { [key: string]: { sales: number; capacity: number } } = {};
 
   cities.forEach(city => {
-    Object.entries(city.sales).forEach(([item, sales]) => {
-      if (!totals[item]) {
-        totals[item] = { sales: 0, capacity: 0 };
-      }
-      totals[item].sales += sales;
-      totals[item].capacity += city.capacity;
-    });
+    if (city.sales) {
+      Object.entries(city.sales).forEach(([item, sales]) => {
+        if (!totals[item]) {
+          totals[item] = { sales: 0, capacity: 0 };
+        }
+        totals[item].sales += sales;
+        totals[item].capacity += city.capacity;
+      });
+    }
   });
 
   const averages: { [key: string]: number } = {};
@@ -114,23 +32,35 @@ const calculateAverageSalesPerCapacity = (cities: City[]) => {
   return averages;
 };
 
-// Predict sales based on capacity and historical averages
-const predictSales = (capacity: number, averages: { [key: string]: number }) => {
-  const predictions: SalesData = {};
-  Object.entries(averages).forEach(([item, rate]) => {
-    predictions[item] = Math.round(capacity * rate);
-  });
-  return predictions;
-};
-
 export default function Home() {
   const today = new Date().toISOString().split('T')[0];
-  const averages = calculateAverageSalesPerCapacity(cities);
+  const citiesInThePast = cities.filter(city => city.date < today);
+  const averages = calculateAverageSalesPerCapacity(citiesInThePast);
+
+  // Calculate remaining stock after each city
+  const calculateRemainingStock = (itemName: string) => {
+    let remainingStock = merchandise.find(m => m.name === itemName)?.stock ?? 0;
+    const stockByCity: { [cityName: string]: number } = {};
+
+    // Sort cities by date to process in chronological order
+    const sortedCities = [...cities].sort((a, b) => a.date.localeCompare(b.date));
+
+    sortedCities.forEach(city => {
+      if (city.date >= today) {
+        // For future dates, check if we have enough stock for this city
+        const predictedSales = Math.round(city.capacity * averages[itemName]);
+        stockByCity[city.name] = remainingStock;
+        remainingStock -= predictedSales;
+      }
+    });
+
+    return { stockByCity, finalStock: remainingStock };
+  };
 
   return (
     <div>
       <Table>
-        <TableHeader>
+        <TableHeader className="py-4">
           <TableRow className="bg-black text-white">
             <TableHead>Item</TableHead>
             {cities.map(city => (
@@ -147,27 +77,104 @@ export default function Home() {
                 </div>
               </TableHead>
             ))}
+            <TableHead className="text-center">
+              Final Stock
+              <div className="text-muted-foreground text-xs">After All Sales</div>
+            </TableHead>
+            <TableHead className="text-center">
+              Missed Sales
+              <div className="text-muted-foreground text-xs">Potential Revenue Lost</div>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {merchandise.map(item => (
-            <TableRow key={item.name}>
-              <TableCell className="font-medium">
-                {item.name}
-                <div className="text-muted-foreground text-sm">${item.price}</div>
-              </TableCell>
-              {cities.map(city => (
-                <TableCell
-                  key={city.name}
-                  className={`text-center ${city.date >= today ? 'text-emerald-600 dark:text-emerald-400' : ''}`}
-                >
-                  {city.date >= today
-                    ? Math.round(city.capacity * averages[item.name])
-                    : city.sales[item.name]}
+          {merchandise.map((item, index) => {
+            const { stockByCity, finalStock } = calculateRemainingStock(item.name);
+            const missedSales = finalStock < 0 ? Math.abs(finalStock) * item.price : 0;
+
+            return (
+              <TableRow
+                key={item.name}
+                className={index % 2 === 0 ? 'bg-gray-50 dark:bg-gray-900' : ''}
+              >
+                <TableCell className="font-medium">
+                  {item.name}
+                  <div className="text-muted-foreground text-sm">${item.price}</div>
+                  <div className="text-muted-foreground text-xs">Stock: {item.stock}</div>
                 </TableCell>
-              ))}
-            </TableRow>
-          ))}
+                {cities.map(city => {
+                  const predictedSales =
+                    city.date >= today ? Math.round(city.capacity * averages[item.name]) : 0;
+                  const hasEnoughStock = stockByCity[city.name] >= predictedSales;
+
+                  return (
+                    <TableCell
+                      key={city.name}
+                      className={`text-center ${
+                        city.date >= today
+                          ? hasEnoughStock
+                            ? 'text-emerald-600 dark:text-emerald-400'
+                            : 'text-red-600 dark:text-red-400'
+                          : ''
+                      }`}
+                    >
+                      {city.date >= today ? predictedSales : (city.sales?.[item.name] ?? 0)}
+                    </TableCell>
+                  );
+                })}
+                <TableCell
+                  className={`text-center ${
+                    finalStock >= 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-red-600 dark:text-red-400'
+                  }`}
+                >
+                  {finalStock}
+                </TableCell>
+                <TableCell className="text-center text-red-600 dark:text-red-400">
+                  {missedSales > 0 ? `$${missedSales.toLocaleString()}` : '-'}
+                </TableCell>
+              </TableRow>
+            );
+          })}
+          <TableRow className="bg-gray-100 font-bold dark:bg-gray-800">
+            <TableCell colSpan={cities.length + 2} className="text-right">
+              Predicted Revenue:
+            </TableCell>
+            <TableCell className="text-center text-emerald-600 dark:text-emerald-400">
+              $
+              {merchandise
+                .reduce((total, item) => {
+                  const { stockByCity } = calculateRemainingStock(item.name);
+                  return (
+                    total +
+                    cities.reduce((cityTotal, city) => {
+                      if (city.date >= today) {
+                        const predictedSales = Math.round(city.capacity * averages[item.name]);
+                        const hasEnoughStock = stockByCity[city.name] >= predictedSales;
+                        return cityTotal + (hasEnoughStock ? predictedSales * item.price : 0);
+                      }
+                      return cityTotal;
+                    }, 0)
+                  );
+                }, 0)
+                .toLocaleString()}
+            </TableCell>
+          </TableRow>
+          <TableRow className="bg-gray-100 font-bold dark:bg-gray-800">
+            <TableCell colSpan={cities.length + 2} className="text-right">
+              Total Potential Revenue Lost Due to Lack of Stock:
+            </TableCell>
+            <TableCell className="text-center text-red-600 dark:text-red-400">
+              $
+              {merchandise
+                .reduce((total, item) => {
+                  const { finalStock } = calculateRemainingStock(item.name);
+                  return total + (finalStock < 0 ? Math.abs(finalStock) * item.price : 0);
+                }, 0)
+                .toLocaleString()}
+            </TableCell>
+          </TableRow>
         </TableBody>
       </Table>
     </div>
