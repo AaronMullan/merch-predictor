@@ -1,103 +1,175 @@
-import Image from "next/image";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+
+type MerchandiseItem = {
+  name: string;
+  price: number;
+};
+
+type SalesData = {
+  [key: string]: number;
+};
+
+type City = {
+  name: string;
+  date: string;
+  capacity: number;
+  sales: SalesData;
+};
+
+const merchandise: MerchandiseItem[] = [
+  { name: 'Green T-shirt Small', price: 25 },
+  { name: 'Green T-shirt Large', price: 25 },
+  { name: 'Black T-shirt Small', price: 25 },
+  { name: 'Black T-shirt Large', price: 25 },
+  { name: 'Tour Poster', price: 15 },
+  { name: 'CD', price: 10 },
+  { name: 'Vinyl', price: 30 },
+];
+
+const cities: City[] = [
+  {
+    name: 'New York',
+    date: '2024-04-29',
+    capacity: 20000,
+    sales: {
+      'Green T-shirt Small': 45,
+      'Green T-shirt Large': 38,
+      'Black T-shirt Small': 52,
+      'Black T-shirt Large': 47,
+      'Tour Poster': 120,
+      CD: 85,
+      Vinyl: 65,
+    },
+  },
+  {
+    name: 'Los Angeles',
+    date: '2025-04-30',
+    capacity: 18000,
+    sales: {
+      'Green T-shirt Small': 38,
+      'Green T-shirt Large': 42,
+      'Black T-shirt Small': 45,
+      'Black T-shirt Large': 40,
+      'Tour Poster': 95,
+      CD: 70,
+      Vinyl: 55,
+    },
+  },
+  {
+    name: 'Chicago',
+    date: '2025-05-01',
+    capacity: 15000,
+    sales: {
+      'Green T-shirt Small': 32,
+      'Green T-shirt Large': 35,
+      'Black T-shirt Small': 38,
+      'Black T-shirt Large': 33,
+      'Tour Poster': 85,
+      CD: 60,
+      Vinyl: 45,
+    },
+  },
+  {
+    name: 'Houston',
+    date: '2025-05-02',
+    capacity: 12000,
+    sales: {
+      'Green T-shirt Small': 28,
+      'Green T-shirt Large': 30,
+      'Black T-shirt Small': 35,
+      'Black T-shirt Large': 32,
+      'Tour Poster': 75,
+      CD: 55,
+      Vinyl: 40,
+    },
+  },
+];
+
+// Calculate average sales per capacity for each item
+const calculateAverageSalesPerCapacity = (cities: City[]) => {
+  const totals: { [key: string]: { sales: number; capacity: number } } = {};
+
+  cities.forEach(city => {
+    Object.entries(city.sales).forEach(([item, sales]) => {
+      if (!totals[item]) {
+        totals[item] = { sales: 0, capacity: 0 };
+      }
+      totals[item].sales += sales;
+      totals[item].capacity += city.capacity;
+    });
+  });
+
+  const averages: { [key: string]: number } = {};
+  Object.entries(totals).forEach(([item, data]) => {
+    averages[item] = data.sales / data.capacity;
+  });
+
+  return averages;
+};
+
+// Predict sales based on capacity and historical averages
+const predictSales = (capacity: number, averages: { [key: string]: number }) => {
+  const predictions: SalesData = {};
+  Object.entries(averages).forEach(([item, rate]) => {
+    predictions[item] = Math.round(capacity * rate);
+  });
+  return predictions;
+};
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const today = new Date().toISOString().split('T')[0];
+  const averages = calculateAverageSalesPerCapacity(cities);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+  return (
+    <div>
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-black text-white">
+            <TableHead>Item</TableHead>
+            {cities.map(city => (
+              <TableHead key={city.name} className="text-center">
+                {city.name}
+                <div className="text-sm font-normal">
+                  {city.date}
+                  <div className="text-xs">Capacity: {city.capacity.toLocaleString()}</div>
+                  {city.date >= today && (
+                    <div className="text-xs text-emerald-600 dark:text-emerald-400">
+                      Predicted Sales
+                    </div>
+                  )}
+                </div>
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {merchandise.map(item => (
+            <TableRow key={item.name}>
+              <TableCell className="font-medium">
+                {item.name}
+                <div className="text-muted-foreground text-sm">${item.price}</div>
+              </TableCell>
+              {cities.map(city => (
+                <TableCell
+                  key={city.name}
+                  className={`text-center ${city.date >= today ? 'text-emerald-600 dark:text-emerald-400' : ''}`}
+                >
+                  {city.date >= today
+                    ? Math.round(city.capacity * averages[item.name])
+                    : city.sales[item.name]}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }
