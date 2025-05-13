@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Container } from './Container';
+import { SignedIn, SignedOut, SignUpButton, SignInButton, UserButton } from '@clerk/nextjs';
 
 export function Header() {
   return (
@@ -21,6 +22,16 @@ export function Header() {
                 <Link href="/about" className="hover:text-primary">
                   About
                 </Link>
+              </li>
+              <li>
+                <SignedOut>
+                  <SignInButton>
+                    <button className="hover:cursor-pointer">Sign In</button>
+                  </SignInButton>
+                </SignedOut>
+                <SignedIn>
+                  <UserButton />
+                </SignedIn>
               </li>
             </ul>
           </nav>
