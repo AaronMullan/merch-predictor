@@ -109,8 +109,9 @@ export function Form() {
   };
 
   return (
-    <div className="space-y-8">
-      <div className="max-w-2xl min-w-[80vw] space-y-4 lg:min-w-[40vw]">
+    <div className="mx-auto max-w-3xl space-y-8">
+      <h2 className="text-2xl font-semibold">Add Items</h2>
+      <div className="space-y-4">
         <form onSubmit={handleItemSubmit} className="space-y-6">
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Add New Item</h2>

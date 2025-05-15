@@ -58,61 +58,58 @@ export function StoreItems() {
   }
 
   return (
-    <div className="space-y-4">
-      <h2 className="text-2xl font-semibold">Current Store Items</h2>
-      {items.length === 0 ? (
-        <p>No items found in the catalog.</p>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {items.map(item => (
-            <Card key={item.id}>
-              <CardHeader>
-                <CardTitle className="flex items-center justify-between">
-                  <span>{item.itemData?.name}</span>
-                  <Badge variant={item.isDeleted ? 'destructive' : 'default'}>
-                    {item.isDeleted ? 'Deleted' : 'Active'}
-                  </Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                {item.itemData?.description && (
-                  <p className="text-muted-foreground mb-4">{item.itemData.description}</p>
-                )}
-                {item.itemData?.variations && item.itemData.variations.length > 0 ? (
-                  <div className="space-y-2">
-                    <h4 className="font-medium">Variations:</h4>
-                    {item.itemData.variations.map(variation => (
-                      <div
-                        key={variation.id}
-                        className="flex items-center justify-between rounded-lg border p-2"
-                      >
-                        <div>
-                          <p className="font-medium">{variation.itemVariationData?.name}</p>
-                          {variation.itemVariationData?.sku && (
-                            <p className="text-muted-foreground text-sm">
-                              SKU: {variation.itemVariationData.sku}
-                            </p>
-                          )}
+    <div className="bg-muted-foreground">
+      <div className="mx-auto max-w-3xl space-y-4 py-8">
+        <h2 className="text-2xl font-semibold text-white">Current Store Items</h2>
+        {items.length === 0 ? (
+          <p className="text-white">No items found in the catalog.</p>
+        ) : (
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {items.map(item => (
+              <Card key={item.id}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    <span>{item.itemData?.name}</span>
+                    <Badge variant={item.isDeleted ? 'destructive' : 'default'}>
+                      {item.isDeleted ? 'Deleted' : 'Active'}
+                    </Badge>
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {item.itemData?.description && (
+                    <p className="text-muted-foreground mb-4">{item.itemData.description}</p>
+                  )}
+                  {item.itemData?.variations && item.itemData.variations.length > 0 ? (
+                    <div className="space-y-2">
+                      <h4 className="font-medium">Variations:</h4>
+                      {item.itemData.variations.map(variation => (
+                        <div
+                          key={variation.id}
+                          className="flex items-center justify-between rounded-lg border p-2"
+                        >
+                          <div>
+                            <p className="font-medium">{variation.itemVariationData?.name}</p>
+                          </div>
+                          <p className="font-medium">
+                            $
+                            {variation.itemVariationData?.priceMoney
+                              ? (
+                                  Number(variation.itemVariationData.priceMoney.amount) / 100
+                                ).toFixed(2)
+                              : 'N/A'}
+                          </p>
                         </div>
-                        <p className="font-medium">
-                          $
-                          {variation.itemVariationData?.priceMoney
-                            ? (Number(variation.itemVariationData.priceMoney.amount) / 100).toFixed(
-                                2
-                              )
-                            : 'N/A'}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground">No variations</p>
-                )}
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-muted-foreground">No variations</p>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
