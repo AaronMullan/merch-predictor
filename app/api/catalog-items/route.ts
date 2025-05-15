@@ -22,19 +22,6 @@ interface CatalogItemVariation {
   };
 }
 
-interface CatalogItem {
-  id: string;
-  type: string;
-  updatedAt?: string;
-  version?: bigint;
-  isDeleted?: boolean;
-  itemData?: {
-    name?: string;
-    description?: string;
-    variations?: CatalogItemVariation[];
-  };
-}
-
 export async function GET() {
   try {
     const response = await client.catalog.list({
@@ -48,16 +35,9 @@ export async function GET() {
       .flatMap((item: any) => item.itemData?.variations || [])
       .map((variation: any) => variation.id);
 
-    console.log('=== INVENTORY DEBUG ===');
-    console.log('Fetching inventory for variations:', variationIds);
-
     const inventoryResponse = await client.inventory.batchGetCounts({
       catalogObjectIds: variationIds,
     });
-
-    console.log('=== INVENTORY RESPONSE FROM SQUARE ===');
-    console.log(JSON.stringify(inventoryResponse, null, 2));
-    console.log('=== END INVENTORY RESPONSE ===');
 
     // Create a map of variation IDs to their inventory counts
     const inventoryCounts = new Map<string, string>();
@@ -73,10 +53,6 @@ export async function GET() {
         }
       }
     }
-
-    console.log('=== PROCESSED INVENTORY COUNTS ===');
-    console.log(Object.fromEntries(inventoryCounts));
-    console.log('=== END INVENTORY DEBUG ===');
 
     // Process the results to handle BigInt values
     const processedItems = items.map((item: any) => ({

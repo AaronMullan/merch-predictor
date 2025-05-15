@@ -62,7 +62,6 @@ export function Form() {
       }
 
       const result = await response.json();
-      console.log('Upload successful:', result);
       setItems([]);
     } catch (error) {
       console.error('Error uploading items:', error);

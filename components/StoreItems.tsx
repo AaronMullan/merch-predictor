@@ -3,29 +3,51 @@
 import { useEffect, useState } from 'react';
 import { fetchCatalogItems } from '@/lib/fetch-catalog-items';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { CatalogItem } from './types';
 import { Skeleton } from '@/components/ui/skeleton';
+import { CatalogItem } from './types';
+import { StoreItemCard } from './StoreItemCard';
 
 export function StoreItems() {
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    async function loadItems() {
-      try {
-        const data = await fetchCatalogItems();
-        setItems(data);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load items');
-      } finally {
-        setLoading(false);
-      }
+  const loadItems = async () => {
+    try {
+      const data = await fetchCatalogItems();
+      setItems(data);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load items');
+    } finally {
+      setLoading(false);
     }
+  };
 
+  useEffect(() => {
     loadItems();
   }, []);
+
+  const handleUpdate = async (updatedItem: CatalogItem) => {
+    try {
+      const response = await fetch(`/api/catalog-items/${updatedItem.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedItem),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to update item');
+      }
+
+      // Refresh the items list
+      await loadItems();
+    } catch (error) {
+      console.error('Error updating item:', error);
+      throw error;
+    }
+  };
 
   useEffect(() => {
     console.log(items);
@@ -75,51 +97,7 @@ export function StoreItems() {
         ) : (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {items.map(item => (
-              <Card key={item.id}>
-                <CardHeader>
-                  <CardTitle className="flex items-center justify-between">
-                    <span>{item.itemData?.name}</span>
-                    <Badge variant={item.isDeleted ? 'destructive' : 'default'}>
-                      {item.isDeleted ? 'Deleted' : 'Active'}
-                    </Badge>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {item.itemData?.description && (
-                    <p className="text-muted-foreground mb-4">{item.itemData.description}</p>
-                  )}
-                  {item.itemData?.variations && item.itemData.variations.length > 0 ? (
-                    <div className="space-y-2">
-                      <h4 className="font-medium">Variations:</h4>
-                      {item.itemData.variations.map(variation => (
-                        <div
-                          key={variation.id}
-                          className="flex items-center justify-between rounded-lg border p-2"
-                        >
-                          <div>
-                            <p className="font-medium">{variation.itemVariationData?.name}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="font-medium">
-                              $
-                              {variation.itemVariationData?.priceMoney
-                                ? (
-                                    Number(variation.itemVariationData.priceMoney.amount) / 100
-                                  ).toFixed(2)
-                                : 'N/A'}
-                            </p>
-                            <p className="text-muted-foreground text-sm">
-                              Stock: {variation.itemVariationData?.inventory || '0'}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <p className="text-muted-foreground">No variations</p>
-                  )}
-                </CardContent>
-              </Card>
+              <StoreItemCard key={item.id} item={item} onUpdate={handleUpdate} />
             ))}
           </div>
         )}
