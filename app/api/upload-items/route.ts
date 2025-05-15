@@ -1,4 +1,4 @@
-import { createCatalogItems } from '@/lib/square-seeder';
+import { createCatalogItems } from '@/lib/create-catalog-items';
 import { NextResponse } from 'next/server';
 
 interface CatalogItemData {
