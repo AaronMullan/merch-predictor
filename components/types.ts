@@ -2,6 +2,7 @@
 export interface CatalogItemVariation {
   id: string;
   type: string;
+  version?: string;
   itemVariationData?: {
     name: string;
     sku?: string;

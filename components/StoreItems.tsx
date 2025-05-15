@@ -15,7 +15,9 @@ export function StoreItems() {
   const loadItems = async () => {
     try {
       const data = await fetchCatalogItems();
-      setItems(data);
+      // Filter out deleted items
+      console.log('data', data);
+      setItems(data.filter((item: CatalogItem) => !item.isDeleted));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load items');
     } finally {
@@ -29,12 +31,38 @@ export function StoreItems() {
 
   const handleUpdate = async (updatedItem: CatalogItem) => {
     try {
-      const response = await fetch(`/api/catalog-items/${updatedItem.id}`, {
-        method: 'PUT',
+      // Transform the item data into the format expected by createCatalogItems
+      const transformedItem = {
+        id: updatedItem.id,
+        version: updatedItem.version,
+        name: updatedItem.itemData?.name || '',
+        basePrice:
+          parseFloat(
+            updatedItem.itemData?.variations?.[0]?.itemVariationData?.priceMoney?.amount?.toString() ||
+              '0'
+          ) / 100,
+        baseInventory: parseInt(
+          updatedItem.itemData?.variations?.[0]?.itemVariationData?.inventory?.toString() || '0'
+        ),
+        hasVariations: (updatedItem.itemData?.variations?.length || 0) > 1,
+        variations:
+          updatedItem.itemData?.variations?.map(variation => ({
+            id: variation.id,
+            version: variation.version,
+            name: variation.itemVariationData?.name || '',
+            price:
+              parseFloat(variation.itemVariationData?.priceMoney?.amount?.toString() || '0') / 100,
+            sku: variation.itemVariationData?.sku || '',
+            inventory: parseInt(variation.itemVariationData?.inventory?.toString() || '0'),
+          })) || [],
+      };
+
+      const response = await fetch('/api/upload-items', {
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(updatedItem),
+        body: JSON.stringify({ items: [transformedItem] }),
       });
 
       if (!response.ok) {
@@ -45,6 +73,55 @@ export function StoreItems() {
       await loadItems();
     } catch (error) {
       console.error('Error updating item:', error);
+      throw error;
+    }
+  };
+
+  const handleDelete = async (itemToDelete: CatalogItem) => {
+    try {
+      // Transform the item data into the format expected by createCatalogItems
+      const transformedItem = {
+        id: itemToDelete.id,
+        version: itemToDelete.version,
+        name: itemToDelete.itemData?.name || '',
+        basePrice:
+          parseFloat(
+            itemToDelete.itemData?.variations?.[0]?.itemVariationData?.priceMoney?.amount?.toString() ||
+              '0'
+          ) / 100,
+        baseInventory: parseInt(
+          itemToDelete.itemData?.variations?.[0]?.itemVariationData?.inventory?.toString() || '0'
+        ),
+        hasVariations: (itemToDelete.itemData?.variations?.length || 0) > 1,
+        variations:
+          itemToDelete.itemData?.variations?.map(variation => ({
+            id: variation.id,
+            version: variation.version,
+            name: variation.itemVariationData?.name || '',
+            price:
+              parseFloat(variation.itemVariationData?.priceMoney?.amount?.toString() || '0') / 100,
+            sku: variation.itemVariationData?.sku || '',
+            inventory: parseInt(variation.itemVariationData?.inventory?.toString() || '0'),
+          })) || [],
+        isDeleted: true,
+      };
+
+      const response = await fetch('/api/upload-items', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ items: [transformedItem] }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to delete item');
+      }
+
+      // Refresh the items list
+      await loadItems();
+    } catch (error) {
+      console.error('Error deleting item:', error);
       throw error;
     }
   };
@@ -65,42 +142,46 @@ export function StoreItems() {
     );
   }
 
+  if (loading) {
+    return (
+      <div className="mx-auto max-w-3xl space-y-4 py-8">
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-6 w-48" />
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="bg-muted-foreground">
       <div className="mx-auto max-w-3xl space-y-4 py-8">
         <h2 className="text-2xl font-semibold text-white">Current Store Items</h2>
-        {loading ? (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[...Array(6)].map((_, index) => (
-              <Card key={index}>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-6 w-32" />
-                    <Skeleton className="h-6 w-16" />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Skeleton className="h-4 w-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <div className="space-y-2">
-                      <Skeleton className="h-12 w-full" />
-                      <Skeleton className="h-12 w-full" />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        ) : items.length === 0 ? (
-          <p className="text-white">No items found in the catalog.</p>
-        ) : (
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {items.map(item => (
-              <StoreItemCard key={item.id} item={item} onUpdate={handleUpdate} />
-            ))}
-          </div>
-        )}
+        <Card>
+          <CardHeader>
+            <CardTitle>Store Items</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {items.map(item => (
+                <StoreItemCard
+                  key={item.id}
+                  item={item}
+                  onUpdate={handleUpdate}
+                  onDelete={handleDelete}
+                />
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

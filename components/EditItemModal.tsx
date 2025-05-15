@@ -21,10 +21,34 @@ export function EditItemModal({ open, onOpenChange, item, onSave }: EditItemModa
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      await onSave(editedItem);
+      // Fetch the latest version of the item
+      const response = await fetch(`/api/catalog-items/${item.id}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch latest item version');
+      }
+      const latestItem: CatalogItem = await response.json();
+
+      // Update the version in our edited item
+      const updatedItem: CatalogItem = {
+        ...editedItem,
+        version: latestItem.version,
+        itemData: {
+          ...editedItem.itemData,
+          name: editedItem.itemData?.name || '',
+          variations: editedItem.itemData?.variations?.map(variation => ({
+            ...variation,
+            version: latestItem.itemData?.variations?.find(
+              (v: { id: string }) => v.id === variation.id
+            )?.version,
+          })),
+        },
+      };
+
+      await onSave(updatedItem);
       toast({
         title: 'Success',
         description: 'Item updated successfully',
+        className: 'bg-green-50 border-green-200 text-green-800',
       });
       onOpenChange(false);
     } catch (error) {

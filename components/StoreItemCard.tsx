@@ -1,22 +1,30 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Pencil } from 'lucide-react';
+import { Pencil, Trash2 } from 'lucide-react';
 import { CatalogItem } from './types';
 import { useState } from 'react';
 import { EditItemModal } from './EditItemModal';
+import { DeleteItemModal } from './DeleteItemModal';
 
 interface StoreItemCardProps {
   item: CatalogItem;
   onUpdate?: (updatedItem: CatalogItem) => Promise<void>;
+  onDelete?: (item: CatalogItem) => Promise<void>;
 }
 
-export function StoreItemCard({ item, onUpdate }: StoreItemCardProps) {
+export function StoreItemCard({ item, onUpdate, onDelete }: StoreItemCardProps) {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
   const handleUpdate = async (updatedItem: CatalogItem) => {
     if (onUpdate) {
       await onUpdate(updatedItem);
+    }
+  };
+
+  const handleDelete = async (itemToDelete: CatalogItem) => {
+    if (onDelete) {
+      await onDelete(itemToDelete);
     }
   };
 
@@ -35,9 +43,14 @@ export function StoreItemCard({ item, onUpdate }: StoreItemCardProps) {
               >
                 <Pencil className="h-4 w-4" />
               </Button>
-              <Badge variant={item.isDeleted ? 'destructive' : 'default'}>
-                {item.isDeleted ? 'Deleted' : 'Active'}
-              </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsDeleteModalOpen(true)}
+                className="h-8 w-8 hover:bg-red-500 hover:text-white"
+              >
+                <Trash2 className="h-4 w-4" />
+              </Button>
             </div>
           </CardTitle>
         </CardHeader>
@@ -80,6 +93,12 @@ export function StoreItemCard({ item, onUpdate }: StoreItemCardProps) {
         onOpenChange={setIsEditModalOpen}
         item={item}
         onSave={handleUpdate}
+      />
+      <DeleteItemModal
+        open={isDeleteModalOpen}
+        onOpenChange={setIsDeleteModalOpen}
+        item={item}
+        onDelete={handleDelete}
       />
     </>
   );

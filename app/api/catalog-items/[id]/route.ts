@@ -1,94 +1,116 @@
-import { createCatalogItems } from '@/lib/create-catalog-items';
+import { SquareClient, SquareEnvironment } from 'square';
 import { NextResponse } from 'next/server';
+import dotenv from 'dotenv';
 
-interface CatalogItemData {
-  name?: string;
-  priceMoney?: {
-    amount: bigint;
-    currency: string;
-  };
-  variations?: Array<{
-    type: string;
-    id: string;
-    itemVariationData: {
-      name: string;
-      sku: string;
-      priceMoney: {
-        amount: bigint;
-        currency: string;
-      };
+dotenv.config();
+
+const client = new SquareClient({
+  token: process.env.SQUARE_ACCESS_TOKEN,
+  environment: SquareEnvironment.Sandbox,
+});
+
+interface CatalogVariation {
+  id: string;
+  type: string;
+  version?: string;
+  itemVariationData?: {
+    name: string;
+    sku?: string;
+    priceMoney?: {
+      amount: bigint;
+      currency: string;
     };
-  }>;
+  };
 }
 
-export async function PUT(request: Request, { params }: { params: { id: string } }) {
-  try {
-    const items = await request.json();
+interface CatalogItem {
+  id: string;
+  type: string;
+  updatedAt: string;
+  version?: string;
+  isDeleted: boolean;
+  itemData?: {
+    name: string;
+    description?: string;
+    variations?: CatalogVariation[];
+  };
+}
 
-    if (!items || !Array.isArray(items)) {
-      return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  try {
+    const response = await client.catalog.list({
+      types: 'ITEM',
+      cursor: undefined,
+    });
+
+    const item = response.data?.find(obj => obj.id === params.id) as CatalogItem | undefined;
+
+    if (!item) {
+      return NextResponse.json({ error: 'Item not found' }, { status: 404 });
     }
 
-    const results = await createCatalogItems(items);
+    // Get inventory counts for variations
+    const variations = item.itemData?.variations || [];
+    const variationIds = variations.map((variation: CatalogVariation) => variation.id);
 
-    // Process the results to handle BigInt values
-    const processedResults = results.map(result => ({
-      errors: result.errors,
-      objects: result.objects?.map(obj => {
-        // Create a new object without the original BigInt values
-        const processedObj = {
-          type: obj.type,
-          id: obj.id,
-          updatedAt: obj.updatedAt,
-          version: obj.version?.toString(),
-          isDeleted: obj.isDeleted,
-          presentAtAllLocations: obj.presentAtAllLocations,
-          presentAtLocationIds: obj.presentAtLocationIds,
-          absentAtLocationIds: obj.absentAtLocationIds,
-        };
+    const inventoryResponse = await client.inventory.batchGetCounts({
+      catalogObjectIds: variationIds,
+    });
 
-        // Handle itemData if it exists
-        if (obj.type === 'ITEM' && 'itemData' in obj) {
-          const itemData = obj.itemData as CatalogItemData;
-          if (itemData) {
-            (processedObj as any).itemData = {
-              name: itemData.name || '',
-              priceMoney: itemData.priceMoney
+    // Create a map of variation IDs to their inventory counts
+    const inventoryCounts = new Map<string, string>();
+    if (inventoryResponse.data) {
+      for (const count of inventoryResponse.data) {
+        const catalogObjectId = count.catalogObjectId;
+        if (
+          typeof catalogObjectId === 'string' &&
+          count.quantity !== null &&
+          count.quantity !== undefined
+        ) {
+          inventoryCounts.set(catalogObjectId, count.quantity);
+        }
+      }
+    }
+
+    // Process the result to handle BigInt values
+    const processedItem = {
+      id: item.id,
+      type: item.type,
+      updatedAt: item.updatedAt || '',
+      version: item.version?.toString(),
+      isDeleted: item.isDeleted || false,
+      itemData: item.itemData
+        ? {
+            name: item.itemData.name || '',
+            description: item.itemData.description,
+            variations: item.itemData.variations?.map((variation: CatalogVariation) => ({
+              id: variation.id,
+              type: variation.type,
+              version: variation.version?.toString(),
+              itemVariationData: variation.itemVariationData
                 ? {
-                    amount: itemData.priceMoney.amount.toString(),
-                    currency: itemData.priceMoney.currency || 'USD',
+                    name: variation.itemVariationData.name || '',
+                    sku: variation.itemVariationData.sku,
+                    priceMoney: variation.itemVariationData.priceMoney
+                      ? {
+                          amount: variation.itemVariationData.priceMoney.amount.toString() || '0',
+                          currency: variation.itemVariationData.priceMoney.currency || 'USD',
+                        }
+                      : undefined,
+                    inventory: inventoryCounts.get(variation.id) || '0',
                   }
                 : undefined,
-              variations: itemData.variations?.map(variation => {
-                const variationData = variation.itemVariationData;
-                if (!variationData) return null;
-                return {
-                  type: variation.type,
-                  id: variation.id,
-                  itemVariationData: {
-                    name: variationData.name || '',
-                    sku: variationData.sku || '',
-                    priceMoney: {
-                      amount: variationData.priceMoney.amount.toString(),
-                      currency: variationData.priceMoney.currency || 'USD',
-                    },
-                  },
-                };
-              }),
-            };
+            })),
           }
-        }
+        : undefined,
+    };
 
-        return processedObj;
-      }),
-    }));
-
-    return NextResponse.json({ success: true, results: processedResults });
+    return NextResponse.json(processedItem);
   } catch (error) {
-    console.error('Error updating catalog item:', error);
+    console.error('Error fetching catalog item:', error);
     return NextResponse.json(
       {
-        error: 'Failed to update catalog item',
+        error: 'Failed to fetch catalog item',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }
