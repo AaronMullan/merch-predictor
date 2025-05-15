@@ -43,6 +43,41 @@ export async function GET() {
 
     const items = response.data || [];
 
+    // Get inventory counts for all variations
+    const variationIds = items
+      .flatMap((item: any) => item.itemData?.variations || [])
+      .map((variation: any) => variation.id);
+
+    console.log('=== INVENTORY DEBUG ===');
+    console.log('Fetching inventory for variations:', variationIds);
+
+    const inventoryResponse = await client.inventory.batchGetCounts({
+      catalogObjectIds: variationIds,
+    });
+
+    console.log('=== INVENTORY RESPONSE FROM SQUARE ===');
+    console.log(JSON.stringify(inventoryResponse, null, 2));
+    console.log('=== END INVENTORY RESPONSE ===');
+
+    // Create a map of variation IDs to their inventory counts
+    const inventoryCounts = new Map<string, string>();
+    if (inventoryResponse.data) {
+      for (const count of inventoryResponse.data) {
+        const catalogObjectId = count.catalogObjectId;
+        if (
+          typeof catalogObjectId === 'string' &&
+          count.quantity !== null &&
+          count.quantity !== undefined
+        ) {
+          inventoryCounts.set(catalogObjectId, count.quantity);
+        }
+      }
+    }
+
+    console.log('=== PROCESSED INVENTORY COUNTS ===');
+    console.log(Object.fromEntries(inventoryCounts));
+    console.log('=== END INVENTORY DEBUG ===');
+
     // Process the results to handle BigInt values
     const processedItems = items.map((item: any) => ({
       id: item.id,
@@ -67,6 +102,7 @@ export async function GET() {
                           currency: variation.itemVariationData.priceMoney.currency || 'USD',
                         }
                       : undefined,
+                    inventory: inventoryCounts.get(variation.id) || '0',
                   }
                 : undefined,
             })),

@@ -2,26 +2,7 @@
 
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-
-interface Variation {
-  name: string;
-  price: number;
-  sku: string;
-}
-
-interface FormItem {
-  name: string;
-  basePrice: number;
-  hasVariations: boolean;
-  variations: Variation[];
-}
-
-interface ConfirmationDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  items: FormItem[];
-  onConfirm: () => void;
-}
+import { ConfirmationDialogProps } from './types';
 
 export function ConfirmationDialog({
   open,

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ConfirmationDialog } from './ConfirmationDailog';
+import { ConfirmationDialog } from './ConfirmationDialog';
 import { X, Plus, Trash2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -21,13 +21,6 @@ interface FormItem {
   hasVariations: boolean;
   variations: Variation[];
   baseInventory: number;
-}
-
-interface ConfirmationDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  items: FormItem[];
-  onConfirm: () => void;
 }
 
 export function Form() {
