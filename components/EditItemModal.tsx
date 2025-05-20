@@ -117,10 +117,13 @@ export function EditItemModal({ open, onOpenChange, item, onUpdate }: EditItemMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-[425px]" aria-describedby="edit-item-description">
         <DialogHeader>
           <DialogTitle>Edit Item</DialogTitle>
         </DialogHeader>
+        <div id="edit-item-description" className="sr-only">
+          Form to edit item details including name, price, inventory, and variations
+        </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">Item Name</Label>
