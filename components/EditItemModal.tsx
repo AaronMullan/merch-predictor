@@ -1,8 +1,12 @@
+'use client';
+
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { CatalogItem } from './types';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Plus, Trash2 } from 'lucide-react';
+import { CatalogItem, CatalogItemVariation } from './types';
 import { useState } from 'react';
 import { useToast } from '@/components/ui/use-toast';
 
@@ -10,49 +14,26 @@ interface EditItemModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   item: CatalogItem;
-  onSave: (updatedItem: CatalogItem) => Promise<void>;
+  onUpdate: (item: CatalogItem) => Promise<void>;
 }
 
-export function EditItemModal({ open, onOpenChange, item, onSave }: EditItemModalProps) {
-  const [isLoading, setIsLoading] = useState(false);
+export function EditItemModal({ open, onOpenChange, item, onUpdate }: EditItemModalProps) {
   const [editedItem, setEditedItem] = useState<CatalogItem>(item);
+  const [hasVariations, setHasVariations] = useState((item.itemData?.variations?.length ?? 0) > 1);
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
-  const handleSave = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setIsLoading(true);
     try {
-      // Fetch the latest version of the item
-      const response = await fetch(`/api/catalog-items/${item.id}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch latest item version');
-      }
-      const latestItem: CatalogItem = await response.json();
-
-      // Update the version in our edited item
-      const updatedItem: CatalogItem = {
-        ...editedItem,
-        version: latestItem.version,
-        itemData: {
-          ...editedItem.itemData,
-          name: editedItem.itemData?.name || '',
-          variations: editedItem.itemData?.variations?.map(variation => ({
-            ...variation,
-            version: latestItem.itemData?.variations?.find(
-              (v: { id: string }) => v.id === variation.id
-            )?.version,
-          })),
-        },
-      };
-
-      await onSave(updatedItem);
+      await onUpdate(editedItem);
       toast({
         title: 'Success',
         description: 'Item updated successfully',
-        className: 'bg-green-50 border-green-200 text-green-800',
       });
       onOpenChange(false);
     } catch (error) {
-      console.error('Error saving item:', error);
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -63,133 +44,284 @@ export function EditItemModal({ open, onOpenChange, item, onSave }: EditItemModa
     }
   };
 
+  const addVariation = () => {
+    if (!editedItem.itemData) return;
+
+    const newVariation: CatalogItemVariation = {
+      id: `#${Date.now()}`,
+      type: 'ITEM_VARIATION',
+      itemVariationData: {
+        name: '',
+        sku: '',
+        inventory: 0,
+        priceMoney: {
+          amount: editedItem.itemData.variations?.[0]?.itemVariationData?.priceMoney?.amount || '0',
+          currency: 'USD',
+        },
+      },
+    };
+
+    setEditedItem({
+      ...editedItem,
+      itemData: {
+        ...editedItem.itemData,
+        variations: [...(editedItem.itemData.variations || []), newVariation],
+      },
+    });
+  };
+
+  const removeVariation = (index: number) => {
+    if (!editedItem.itemData?.variations) return;
+
+    const newVariations = [...editedItem.itemData.variations];
+    newVariations.splice(index, 1);
+
+    setEditedItem({
+      ...editedItem,
+      itemData: {
+        ...editedItem.itemData,
+        variations: newVariations,
+      },
+    });
+  };
+
+  const updateVariation = (index: number, field: string, value: string) => {
+    if (!editedItem.itemData?.variations) return;
+
+    const newVariations = [...editedItem.itemData.variations];
+    const variation = newVariations[index];
+
+    if (variation.itemVariationData) {
+      if (field === 'name') {
+        variation.itemVariationData.name = value;
+      } else if (field === 'sku') {
+        variation.itemVariationData.sku = value;
+      } else if (field === 'price') {
+        variation.itemVariationData.priceMoney = {
+          amount: (parseFloat(value) * 100).toString(),
+          currency: 'USD',
+        };
+      } else if (field === 'inventory') {
+        variation.itemVariationData.inventory = parseInt(value);
+      }
+    }
+
+    setEditedItem({
+      ...editedItem,
+      itemData: {
+        ...editedItem.itemData,
+        variations: newVariations,
+      },
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Edit Item</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
-          <div className="grid gap-2">
-            <Label htmlFor="name">Name</Label>
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Item Name</Label>
             <Input
               id="name"
               value={editedItem.itemData?.name || ''}
               onChange={e =>
                 setEditedItem({
                   ...editedItem,
-                  itemData: {
-                    name: e.target.value || editedItem.itemData?.name || '',
-                    variations: editedItem.itemData?.variations,
-                  },
+                  itemData: { ...editedItem.itemData!, name: e.target.value },
                 })
               }
             />
           </div>
-          {editedItem.itemData?.variations?.map((variation, index) => (
-            <div key={variation.id} className="space-y-2 rounded-lg border p-4">
-              <h4 className="font-medium">Variation {index + 1}</h4>
-              <div className="grid gap-2">
-                <Label htmlFor={`variation-name-${index}`}>Name</Label>
-                <Input
-                  id={`variation-name-${index}`}
-                  value={variation.itemVariationData?.name || ''}
-                  onChange={e => {
-                    const newVariations = [...(editedItem.itemData?.variations || [])];
-                    newVariations[index] = {
-                      ...newVariations[index],
-                      itemVariationData: {
-                        name: e.target.value || variation.itemVariationData?.name || '',
-                        sku: variation.itemVariationData?.sku,
-                        priceMoney: variation.itemVariationData?.priceMoney,
-                        inventory: variation.itemVariationData?.inventory,
-                      },
-                    };
+
+          <div className="space-y-2">
+            <Label htmlFor="basePrice">Base Price</Label>
+            <Input
+              id="basePrice"
+              type="number"
+              min="0"
+              step="0.01"
+              value={
+                parseFloat(
+                  editedItem.itemData?.variations?.[0]?.itemVariationData?.priceMoney?.amount || '0'
+                ) / 100
+              }
+              onChange={e => {
+                const price = e.target.value;
+                if (!editedItem.itemData?.variations) return;
+
+                const newVariations = editedItem.itemData.variations.map(variation => ({
+                  ...variation,
+                  itemVariationData: {
+                    ...variation.itemVariationData!,
+                    priceMoney: {
+                      amount: (parseFloat(price) * 100).toString(),
+                      currency: 'USD',
+                    },
+                  },
+                }));
+
+                setEditedItem({
+                  ...editedItem,
+                  itemData: {
+                    ...editedItem.itemData,
+                    variations: newVariations,
+                  },
+                });
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="baseInventory">Base Inventory</Label>
+            <Input
+              id="baseInventory"
+              type="number"
+              min="0"
+              value={editedItem.itemData?.variations?.[0]?.itemVariationData?.inventory || 0}
+              onChange={e => {
+                const inventory = parseInt(e.target.value);
+                if (!editedItem.itemData?.variations) return;
+
+                const newVariations = editedItem.itemData.variations.map(variation => ({
+                  ...variation,
+                  itemVariationData: {
+                    ...variation.itemVariationData!,
+                    inventory,
+                  },
+                }));
+
+                setEditedItem({
+                  ...editedItem,
+                  itemData: {
+                    ...editedItem.itemData,
+                    variations: newVariations,
+                  },
+                });
+              }}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasVariations"
+                checked={hasVariations}
+                onCheckedChange={checked => {
+                  const newHasVariations = checked as boolean;
+                  setHasVariations(newHasVariations);
+                  if (!newHasVariations && editedItem.itemData?.variations) {
+                    // Keep only the first variation
                     setEditedItem({
                       ...editedItem,
                       itemData: {
-                        name: editedItem.itemData?.name || '',
-                        variations: newVariations,
+                        ...editedItem.itemData,
+                        variations: [editedItem.itemData.variations[0]],
                       },
                     });
-                  }}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor={`variation-price-${index}`}>Price</Label>
-                <Input
-                  id={`variation-price-${index}`}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={
-                    variation.itemVariationData?.priceMoney
-                      ? Number(variation.itemVariationData.priceMoney.amount) / 100
-                      : 0
                   }
-                  onChange={e => {
-                    const newVariations = [...(editedItem.itemData?.variations || [])];
-                    newVariations[index] = {
-                      ...newVariations[index],
-                      itemVariationData: {
-                        name: variation.itemVariationData?.name || '',
-                        sku: variation.itemVariationData?.sku,
-                        priceMoney: {
-                          amount: String(Math.round(parseFloat(e.target.value) * 100)),
-                          currency: 'USD',
-                        },
-                        inventory: variation.itemVariationData?.inventory,
-                      },
-                    };
-                    setEditedItem({
-                      ...editedItem,
-                      itemData: {
-                        name: editedItem.itemData?.name || '',
-                        variations: newVariations,
-                      },
-                    });
-                  }}
-                />
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor={`variation-inventory-${index}`}>Inventory</Label>
-                <Input
-                  id={`variation-inventory-${index}`}
-                  type="number"
-                  min="0"
-                  value={variation.itemVariationData?.inventory || 0}
-                  onChange={e => {
-                    const newVariations = [...(editedItem.itemData?.variations || [])];
-                    newVariations[index] = {
-                      ...newVariations[index],
-                      itemVariationData: {
-                        name: variation.itemVariationData?.name || '',
-                        sku: variation.itemVariationData?.sku,
-                        priceMoney: variation.itemVariationData?.priceMoney,
-                        inventory: parseInt(e.target.value),
-                      },
-                    };
-                    setEditedItem({
-                      ...editedItem,
-                      itemData: {
-                        name: editedItem.itemData?.name || '',
-                        variations: newVariations,
-                      },
-                    });
-                  }}
-                />
-              </div>
+                }}
+              />
+              <Label htmlFor="hasVariations">This item has variations</Label>
             </div>
-          ))}
-        </div>
-        <div className="flex justify-end gap-2">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={handleSave} disabled={isLoading}>
-            {isLoading ? 'Saving...' : 'Save Changes'}
-          </Button>
-        </div>
+
+            {hasVariations && editedItem.itemData?.variations && (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-md font-semibold">Variations</h3>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={addVariation}
+                    className="flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Variation
+                  </Button>
+                </div>
+                <div className="space-y-4 rounded-lg border p-4">
+                  {editedItem.itemData.variations.map((variation, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-medium">Variation {index + 1}</h4>
+                        {index > 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeVariation(index)}
+                            className="h-8 w-8 hover:bg-red-500 hover:text-white"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <Label htmlFor={`name-${index}`}>Name</Label>
+                          <Input
+                            id={`name-${index}`}
+                            value={variation.itemVariationData?.name || ''}
+                            onChange={e => updateVariation(index, 'name', e.target.value)}
+                            placeholder="e.g., Small, Red, etc."
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`price-${index}`}>Price</Label>
+                          <Input
+                            id={`price-${index}`}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={
+                              parseFloat(variation.itemVariationData?.priceMoney?.amount || '0') /
+                              100
+                            }
+                            onChange={e => updateVariation(index, 'price', e.target.value)}
+                            required
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`sku-${index}`}>SKU</Label>
+                          <Input
+                            id={`sku-${index}`}
+                            value={variation.itemVariationData?.sku || ''}
+                            onChange={e => updateVariation(index, 'sku', e.target.value)}
+                            placeholder="Optional SKU"
+                          />
+                        </div>
+                        <div>
+                          <Label htmlFor={`inventory-${index}`}>Inventory</Label>
+                          <Input
+                            id={`inventory-${index}`}
+                            type="number"
+                            min="0"
+                            value={variation.itemVariationData?.inventory || 0}
+                            onChange={e => updateVariation(index, 'inventory', e.target.value)}
+                            required
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end space-x-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isLoading}>
+              {isLoading ? 'Saving...' : 'Save Changes'}
+            </Button>
+          </div>
+        </form>
       </DialogContent>
     </Dialog>
   );

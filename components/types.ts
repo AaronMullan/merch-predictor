@@ -6,7 +6,7 @@ export interface CatalogItemVariation {
   itemVariationData?: {
     name: string;
     sku?: string;
-    inventory?: number;
+    inventory: number;
     priceMoney?: {
       amount: string;
       currency: string;
@@ -56,4 +56,14 @@ export interface SalesData {
   startDate: string;
   endDate: string;
   averageSales: number;
+}
+
+export interface LineItem {
+  name: string;
+  quantity: string;
+  catalogObjectId: string;
+  basePriceMoney: {
+    amount: bigint;
+    currency: string;
+  };
 }

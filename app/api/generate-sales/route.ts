@@ -1,15 +1,6 @@
 import { createSalesData } from '@/lib/create-sales-data';
 import { NextResponse } from 'next/server';
-
-interface LineItem {
-  name: string;
-  quantity: string;
-  catalogObjectId: string;
-  basePriceMoney: {
-    amount: bigint;
-    currency: string;
-  };
-}
+import { LineItem } from '@/components/types';
 
 export async function POST(request: Request) {
   try {
