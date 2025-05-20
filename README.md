@@ -1,5 +1,7 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+[![Build Status](https://travis-ci.com/aaronmullan/merch-predictor.svg?branch=main)](https://travis-ci.com/aaronmullan/merch-predictor)
+
 ## Getting Started
 
 First, run the development server:
