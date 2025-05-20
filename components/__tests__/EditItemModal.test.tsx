@@ -56,6 +56,11 @@ describe('EditItemModal', () => {
     // Check if the modal title is rendered
     expect(screen.getByText('Edit Item')).toBeInTheDocument();
 
+    // Check if the description is present
+    expect(
+      screen.getByText('Form to edit item details including name, price, inventory, and variations')
+    ).toBeInTheDocument();
+
     // Check if the initial item data is displayed correctly
     expect(screen.getByLabelText('Item Name')).toHaveValue('Test Item');
     expect(screen.getByLabelText('Base Price')).toHaveValue(10);
