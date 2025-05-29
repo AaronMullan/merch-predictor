@@ -92,7 +92,7 @@ export function StoreItemCard({ item, onUpdate, onDelete }: StoreItemCardProps) 
         open={isEditModalOpen}
         onOpenChange={setIsEditModalOpen}
         item={item}
-        onSave={handleUpdate}
+        onUpdate={handleUpdate}
       />
       <DeleteItemModal
         open={isDeleteModalOpen}
