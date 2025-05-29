@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label';
 import { SalesConfirmationDialog } from './SalesConfirmationDialog';
 import { SalesData } from './types';
 
-export function SalesForm() {
+export function SeedForm() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [averageSales, setAverageSales] = useState('');
