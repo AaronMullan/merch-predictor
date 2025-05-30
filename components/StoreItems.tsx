@@ -164,7 +164,7 @@ export function StoreItems() {
   return (
     <div className="bg-muted-foreground">
       <div className="mx-auto max-w-3xl space-y-4 py-8">
-        <h2 className="text-2xl font-semibold text-white">Current Store Items</h2>
+        <h2 className="text-2xl font-semibold text-white">Current Square Store Items</h2>
         <Card>
           <CardHeader>
             <CardTitle>Store Items</CardTitle>

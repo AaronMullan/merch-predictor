@@ -8,14 +8,14 @@ export default function AboutPage() {
 
         <div className="prose dark:prose-invert">
           <p className="mb-4">
-            Merch Predictor is a powerful tool designed to help touring artists and merchandise
-            managers optimize their inventory and maximize revenue during tours.
+            Merch Predictor is a simple tool designed to help touring bands optimize their inventory
+            and maximize revenue during tours.
           </p>
 
           <h2 className="mt-8 mb-4 text-2xl font-semibold">How It Works</h2>
           <p className="mb-4">
-            The application uses historical sales data and venue capacities to predict future
-            merchandise sales across different tour locations. Here's what it can do:
+            The application uses sales data and venue capacities to predict future merchandise sales
+            across different tour locations. Here's what it can do:
           </p>
 
           <ul className="mb-6 list-disc space-y-2 pl-6">

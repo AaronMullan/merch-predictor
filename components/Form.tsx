@@ -102,7 +102,7 @@ export function Form() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
-      <h2 className="text-2xl font-semibold">Add Items</h2>
+      <h2 className="text-2xl font-semibold">Add Items to Square</h2>
       <div className="space-y-4">
         <form onSubmit={handleItemSubmit} className="space-y-6">
           <div className="space-y-4">
